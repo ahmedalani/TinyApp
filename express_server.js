@@ -1,5 +1,6 @@
 var express = require("express");
 const bodyParser = require("body-parser");
+const cookieParser = require('cookie-parser')
 
 var app = express();
 
@@ -75,16 +76,23 @@ app.post("/urls/:id/delete", (req, res) => {
   let id = req.params.id;
   delete urlDatabase[id];
 
-  res.redirect('/urls')
-})
+  res.redirect('/urls');
+});
 
 //modifying the long URL
 app.post("/urls/:id/edit", (req, res) => {
   //finding the item
   let id = req.params.id;
   urlDatabase[id] = req.body.longURL;
-  res.redirect('/urls')
-})
+  res.redirect('/urls');
+});
+
+//Cookieee
+app.post("/login", (req, res) => {
+  let usernameValue = req.body.username;
+  res.cookie('username', usernameValue);
+  res.redirect("/urls");
+});
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

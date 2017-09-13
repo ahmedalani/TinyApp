@@ -1,10 +1,10 @@
 var express = require("express");
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 
 var app = express();
-
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(cookieParser());
 
 var PORT = process.env.PORT || 8080;
 
@@ -13,6 +13,14 @@ var urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+//object passed to all templets through this function
+app.use(function (req, res, next) {
+   res.locals = {
+     username: req.cookies["username"]
+   };
+   next();
+});
 
 function generateRandomString() {
  var text = "";
@@ -59,8 +67,8 @@ app.get("/urls/:id", (req, res) => {
 app.get("/u/:shortURL", (req, res) => {
   let shortURL = req.params.shortURL;
   console.log(shortURL)
-    let longURL = urlDatabase[shortURL];
-    res.redirect(longURL);
+  let longURL = urlDatabase[shortURL];
+  res.redirect(longURL);
 
 });
 
@@ -90,9 +98,12 @@ app.post("/urls/:id/edit", (req, res) => {
 //Cookieee
 app.post("/login", (req, res) => {
   let usernameValue = req.body.username;
-  res.cookie('username', usernameValue);
+  res.cookie("username", usernameValue);
   res.redirect("/urls");
 });
+
+// let usernameShare = { username: req.cookies["username"] };
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

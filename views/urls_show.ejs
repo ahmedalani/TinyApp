@@ -5,6 +5,14 @@
     <title></title>
   </head>
   <body>
-  <li><%= shortURL%> <%= longURL%></li>
+
+    <form action="/urls/<%= shortURL %>/edit" method="POST">
+      <p>
+      <input type="text" name="longURL" value="<%= longURL %>">
+        <button type="submit">Edit</button>
+        <li><%= shortURL%> <%= longURL%></li>
+      </p>
+    </form>
+
   </body>
   </html>

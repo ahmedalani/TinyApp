@@ -37,6 +37,8 @@ app.get("/hello", (req, res) => {
 
 app.get("/urls", (req, res) => {
   let templateVars = { urls: urlDatabase };
+  // let id = urlDatabase[req.params.id];
+  // let test = [templateVars, id]
   res.render("urls_index", templateVars);
 });
 
@@ -67,6 +69,22 @@ app.post("/urls", (req, res) => {
   res.redirect(301, `/urls/${randomString}`);
 });
 
+// Delete Item
+app.post("/urls/:id/delete", (req, res) => {
+  //finding the item
+  let id = req.params.id;
+  delete urlDatabase[id];
+
+  res.redirect('/urls')
+})
+
+//modifying the long URL
+app.post("/urls/:id/edit", (req, res) => {
+  //finding the item
+  let id = req.params.id;
+  urlDatabase[id] = req.body.longURL;
+  res.redirect('/urls')
+})
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

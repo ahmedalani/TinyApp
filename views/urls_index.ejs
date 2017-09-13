@@ -5,11 +5,15 @@
   <title></title>
 </head>
 <body>
-  <ul>
-    <% for (var key in urls) { %>
-    <li><%= urls[key] %></li>
-    <% } %>
-  </ul>
+    <ul>
+      <% for (var key in urls) { %>
+        <li>
+          <form method="POST" action="/urls/<%= key %>/delete">
+                <%= urls[key] %> <button>Delete</button>
+          </form>
+        </li>
+      <% } %>
+    </ul>
     <a href="">
 </body>
 </html>

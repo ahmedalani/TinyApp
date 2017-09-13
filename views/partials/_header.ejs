@@ -1,6 +1,15 @@
 
-  <h1>Hello :)</h1>
   <title></title>
+  <% if (username) { %>
+      <h1>Hello <%= username %> :)</h1>
+    <form method="post" action="/logout" >
+      <button>Logout</button>
+    </form>
+  <% } %>
+  <% if (!username) { %>
+      <h1>Hello :)</h1>
+  <% } %>
+
   <form method="post" action="/login">
     <input type="text" name="username" placeholder="Username..."> <button type="submit">Submit</button>
   </form>

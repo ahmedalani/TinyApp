@@ -25,71 +25,68 @@ app.use(function (req, res, next) {
 function generateRandomString() {
  var text = "";
   var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
   for (var i = 0; i < 6; i++)
     text += possible.charAt(Math.floor(Math.random() * possible.length));
-
   return text;
 }
 
+//Home page
 app.get("/", (req, res) => {
   res.end("Hello!");
 });
 
+//check for requirment, this might not be needed
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
-
+//check for requirment, this might not be needed
 app.get("/hello", (req, res) => {
   res.end("<html><body>Hello <b>World</b></body></html>\n");
 });
 
+//passes the urlDatabase to urls_index and render the page
 app.get("/urls", (req, res) => {
   let templateVars = { urls: urlDatabase };
-  // let id = urlDatabase[req.params.id];
-  // let test = [templateVars, id]
   res.render("urls_index", templateVars);
 });
 
+//for to submit new urls to database
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+//redirect to the new URL created and assign a short URL to the long URL created.
+app.post("/urls", (req, res) => {
+  const randomString = generateRandomString();
+  urlDatabase[randomString] = req.body.longURL;
+  res.redirect(`/urls/${randomString}`);
+});
+//404 needed
+//passing data to urls_show templet and rendering the templet
 app.get("/urls/:id", (req, res) => {
-  // if (req.params.id )
   let templateVars = {
     shortURL: req.params.id,
     longURL: urlDatabase[req.params.id]
   };
   res.render("urls_show", templateVars);
 });
-
+//404 needed
+//when client enters a short URL he get redirected to the long URL assigned.
 app.get("/u/:shortURL", (req, res) => {
   let shortURL = req.params.shortURL;
-  console.log(shortURL)
   let longURL = urlDatabase[shortURL];
   res.redirect(longURL);
-
-});
-
-app.post("/urls", (req, res) => {
-  const randomString = generateRandomString();
-  urlDatabase[randomString] = req.body.longURL;
-  res.redirect(301, `/urls/${randomString}`);
 });
 
 // Delete Item
 app.post("/urls/:id/delete", (req, res) => {
-  //finding the item
   let id = req.params.id;
   delete urlDatabase[id];
-
   res.redirect('/urls');
 });
-
+//404 needed
 //modifying the long URL
 app.post("/urls/:id/edit", (req, res) => {
-  //finding the item
   let id = req.params.id;
   urlDatabase[id] = req.body.longURL;
   res.redirect('/urls');
@@ -107,9 +104,6 @@ app.post("/logout", (req, res) => {
   res.clearCookie("username");
   res.redirect("/urls");
 });
-
-
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);

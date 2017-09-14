@@ -9,9 +9,16 @@ app.use(cookieParser());
 var PORT = process.env.PORT || 8080;
 
 app.set("view engine", "ejs");
-var urlDatabase = {
+
+//urls data object
+const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
+};
+
+//users data obj
+const users = {
+
 };
 
 //object passed to all templets through this function
@@ -104,6 +111,22 @@ app.post("/logout", (req, res) => {
   res.clearCookie("username");
   res.redirect("/urls");
 });
+
+//register endpoint
+app.get('/register', (req, res) => {
+  res.render('register');
+});
+
+//register handler
+app.post('/register', (req, res) => {
+  let randomString = generateRandomString();
+  users.randomString = {};
+  users.randomString = {};
+  res.redirect('/urls');
+});
+
+
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);

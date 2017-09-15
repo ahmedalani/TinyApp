@@ -1,15 +1,16 @@
 
   <title></title>
-  <% if (username) { %>
-      <h1>Hello <%= username %> :)</h1>
+  <% if (user) { %>
+      <h1>Hello <%= user.email %> :)</h1>
     <form method="post" action="/logout" >
       <button>Logout</button>
     </form>
-  <% } %>
-  <% if (!username) { %>
+  <% } else { %>
       <h1>Hello :)</h1>
+      <form action="/register" method="post">
+        <button type="submit">Register</button>
+      </form>
+      <form action="/login" method="post">
+        <button type="submit">Login</button>
+      </form>
   <% } %>
-
-  <form method="post" action="/login">
-    <input type="text" name="username" placeholder="Username..."> <button type="submit">Submit</button>
-  </form>

@@ -17,15 +17,23 @@ const urlDatabase = {
 };
 
 //users data obj
-const users = {
-
+const users =
+{ uWhWIl:
+   { id:  'uWhWIl' ,
+     email:  'ahmed@alani' ,
+     password:  'alani'  },
+  nlQUFi:
+   { id:  'nlQUFi' ,
+     email:  'shosho@shosho' ,
+     password: 'shosho'  }
 };
 
-//object passed to all templets through this function
+//middleware: object passed to all templets through this function
 app.use(function (req, res, next) {
-   res.locals = {
-     username: req.cookies["username"]
-   };
+   // res.locals = {
+   //   username: req.cookies["username"]
+   // };
+   res.locals.user = users[req.cookies["user_id"]]
    next();
 });
 
@@ -99,16 +107,43 @@ app.post("/urls/:id/edit", (req, res) => {
   res.redirect('/urls');
 });
 
-//Cookieee
+// login endpoint
+app.get('/login', (req, res) => {
+  res.render('login')
+});
+
+
+
+
+//login handler & set the cookie then redirect back to urls
 app.post("/login", (req, res) => {
-  let usernameValue = req.body.username;
-  res.cookie("username", usernameValue);
+  const { email, password } = req.body;
+  function findUser (email, password) {
+    for (let key in users) {
+      if (users[key].email === email && users[key].password === password) {
+        return users[key];
+      }
+    }
+  }
+  const userObj = findUser(email, password);
+  if (!userObj) {
+    res.send("error: username or password are invalid")
+  }
+  res.cookie('user_id', userObj.id);
   res.redirect("/urls");
 });
+  // const values = Object.keys(users).map(key => users[key]);
+
+  // let usernameValue = req.body.username;
+  // let passwordValue = req.body.password;
+  // res.cookie("username", usernameValue);
+  // res.cookie("password", passwordValue);
+  // res.redirect("/urls");
+
 
 //Logout and remove cookie history
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
@@ -117,11 +152,36 @@ app.get('/register', (req, res) => {
   res.render('register');
 });
 
+//looping through the users database to find a matching email
+function doesEmailExist(email) {
+  const values = Object.keys(users).map(key => users[key]);
+  for (let i = 0; i < values.length; i++) {
+    if (values[i].email === email) {
+      return true;
+    } else {
+        return false;
+      }
+  }
+}
+
 //register handler
 app.post('/register', (req, res) => {
   let randomString = generateRandomString();
-  users.randomString = {};
-  users.randomString = {};
+
+  //check if email or password is empty strings, if so return error
+  if (!req.body.email || !req.body.password) {
+    res.send('error: please enter a valid username and password');
+  }
+  //check if email already exist, if so return error
+  if (doesEmailExist(req.body.email)) {
+    res.send('error: sorry username is used :-/ ');
+  }
+  users[randomString] = {
+    id: randomString,
+    email: req.body.email,
+    password: req.body.password
+  };
+  res.cookie("user_id", users[randomString].id);
   res.redirect('/urls');
 });
 

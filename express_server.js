@@ -12,8 +12,16 @@ app.set("view engine", "ejs");
 
 //urls data object
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xvn2": {
+    "id": "b2xvn2",
+    "userID": "uWhWIl",
+    "longURL": "http://www.lighthouselabs.ca"
+  },
+  "9sm5xk": {
+    "id": "9sm5xk",
+    "userID": "nlQUFi",
+    "longURL": "http://www.google.com"
+  }
 };
 
 //users data obj
@@ -39,9 +47,10 @@ app.use(function (req, res, next) {
 
 function generateRandomString() {
  var text = "";
-  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (var i = 0; i < 6; i++)
+  var possible = "abcdefghijklmnopqrstuvwxyz0123456789";
+  for (var i = 0; i < 6; i++) {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
   return text;
 }
 
@@ -59,9 +68,21 @@ app.get("/hello", (req, res) => {
   res.end("<html><body>Hello <b>World</b></body></html>\n");
 });
 
+//function finds a user's urls
+function urlForUser (id) {
+  let userUrls = {};
+  for (let key in urlDatabase) {
+    if (urlDatabase[key].userID === id ) {
+      userUrls[key] = urlDatabase[key];
+    }
+  }
+  return userUrls;
+}
+console.log(urlForUser("uWhWIl"));
 //passes the urlDatabase to urls_index and render the page
 app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase };
+  let userid = req.cookies["user_id"];
+  let templateVars = { urls: urlForUser(userid) };
   res.render("urls_index", templateVars);
 });
 
@@ -77,38 +98,70 @@ app.get("/urls/new", (req, res) => {
 //redirect to the new URL created and assign a short URL to the long URL created.
 app.post("/urls", (req, res) => {
   const randomString = generateRandomString();
-  urlDatabase[randomString] = req.body.longURL;
-  res.redirect(`/urls/${randomString}`);
+  urlDatabase[randomString] = {
+    "id": randomString,
+    "userID": req.cookies["user_id"],
+    "longURL": req.body.longURL
+  }
+  // console.log(urlDatabase);
+  res.redirect(`/urls`);
 });
 //404 needed
 //passing data to urls_show templet and rendering the templet
 app.get("/urls/:id", (req, res) => {
+  let userid = req.cookies["user_id"];
+  if (!userid) {
+    res.redirect("/urls");
+    return;
+  }
+
+  let urlobject = urlDatabase[req.params.id]
+  if (!urlobject) {
+    res.sendStatus(404);
+    return;
+  }
   let templateVars = {
-    shortURL: req.params.id,
-    longURL: urlDatabase[req.params.id]
-  };
+    shortURL : req.params.id,
+    longURL: urlDatabase[req.params.id].longURL
+  }
+    // shortURL: req.params.id,
+    // longURL: urlobject.longURL
   res.render("urls_show", templateVars);
 });
 //404 needed
 //when client enters a short URL he get redirected to the long URL assigned.
 app.get("/u/:shortURL", (req, res) => {
   let shortURL = req.params.shortURL;
-  let longURL = urlDatabase[shortURL];
+  let longURL = urlDatabase[shortURL].longURL;
   res.redirect(longURL);
 });
 
 // Delete Item
 app.post("/urls/:id/delete", (req, res) => {
   let id = req.params.id;
-  delete urlDatabase[id];
-  res.redirect('/urls');
+  let user_id = req.cookies["user_id"];
+  if (!id || !user_id) {
+    res.sendStatus(401);
+    return;
+  }
+  if ((req.cookies["user_id"]) === (urlDatabase[id]["user_id"])) {
+    delete urlDatabase[id];
+    res.redirect('/urls');
+  } else {
+    res.status(403).send("sorry you're only allowed to edit your ownd URLs :-/ ");
+  }
 });
 //404 needed
-//modifying the long URL
-app.post("/urls/:id/edit", (req, res) => {
+//Edit the long URL
+app.post("/urls/:id", (req, res) => {
   let id = req.params.id;
-  urlDatabase[id] = req.body.longURL;
-  res.redirect('/urls');
+  let userID = urlDatabase[id]["userID"];
+  if (userID === req.cookies["user_id"]) {
+    urlDatabase[id].longURL = req.body.longURL;
+    res.redirect('/urls');
+  } else {
+      res.status(403).send("sorry you're only allowed to edit your ownd URLs :-/ ");
+  }
 });
 
 // login endpoint

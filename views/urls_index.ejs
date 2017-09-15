@@ -5,14 +5,22 @@
 </head>
 <body>
   <% include ./partials/_header %>
-  <ul>
-    <% for (var key in urls) { %>
-      <li>
-        <form method="POST" action="/urls/<%= key %>/delete">
-              <%= urls[key] %> <button>Delete</button>
-        </form>
-      </li>
-    <% } %>
-  </ul>
+  <% if (user) { %>
+    <ul>
+      <% for (var key in urls) { %>
+        <li>
+          <form method="POST" action="/urls/<%= key %>/delete">
+                <%= urls[key].longURL %> <%= key %> <button>Delete</button>
+          </form>
+
+          <form method="get" action="/urls/<%= key %>">
+            <button>Edit</button>
+          </form>
+        </li>
+      <% } %>
+    </ul>
+  <% } else { %>
+    <p>please log in or register to display URLs</p>
+  <% } %>
 </body>
 </html>

@@ -5,11 +5,11 @@
   </head>
   <body>
     <% include ./partials/_header %>
-    <form action="/urls/<%= shortURL %>/edit" method="POST">
+    <form action="/urls/<%= shortURL %>" method="POST">
       <p>
       <input type="text" name="longURL" value="<%= longURL %>">
         <button type="submit">Edit</button>
-        <li><%= shortURL%> <%= longURL%></li>
+        <li><%= longURL %></li>
       </p>
     </form>
 

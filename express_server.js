@@ -67,7 +67,11 @@ app.get("/urls", (req, res) => {
 
 //for to submit new urls to database
 app.get("/urls/new", (req, res) => {
+  if (req.cookies["user_id"]){
   res.render("urls_new");
+  } else {
+    res.redirect("urls");
+  }
 });
 
 //redirect to the new URL created and assign a short URL to the long URL created.

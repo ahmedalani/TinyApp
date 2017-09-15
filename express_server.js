@@ -127,7 +127,7 @@ app.post("/login", (req, res) => {
   }
   const userObj = findUser(email, password);
   if (!userObj) {
-    res.send("error: username or password are invalid")
+    res.status(403).send("error: username or password are invalid")
   }
   res.cookie('user_id', userObj.id);
   res.redirect("/urls");

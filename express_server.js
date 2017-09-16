@@ -79,7 +79,7 @@ function urlForUser (id) {
   }
   return userUrls;
 }
-console.log(urlForUser("uWhWIl"));
+
 //passes the urlDatabase to urls_index and render the page
 app.get("/urls", (req, res) => {
   let userid = req.cookies["user_id"];
@@ -104,7 +104,7 @@ app.post("/urls", (req, res) => {
     "userID": req.cookies["user_id"],
     "longURL": req.body.longURL
   }
-  // console.log(urlDatabase);
+  console.log(urlDatabase);
   res.redirect(`/urls`);
 });
 //404 needed
@@ -176,18 +176,36 @@ app.get('/login', (req, res) => {
 //login handler & set the cookie then redirect back to urls
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
-  function findUser (email, password) {
+  let userIdFromDatabase;
+  function findUser (email) {
     for (let key in users) {
-      if (users[key].email === email && users[key].password === password) {
-        return users[key];
+      if (users[key].email === email) {
+        userIdFromDatabase = users[key].id;
+        return users[key].password;
       }
     }
   }
-  const userObj = findUser(email, password);
-  if (!userObj) {
-    res.status(403).send("error: username or password are invalid")
+  //userHashedPasswordFromDatabase
+  let uHPFD = findUser(email);
+  if (!bcrypt.compareSync(password, uHPFD)) {
+    res.status(403).send("error: username or password are invalid");
+    return;
   }
-  res.cookie('user_id', userObj.id);
+
+// );
+  // function findUserID (email, password) {
+  //   for (let key in users) {
+  //     if (users[key].email === email && users[key].password === password) {
+  //       return users[key];
+  //     }
+  //   }
+  // }
+  // const userObj = findUser(email, password);
+  if (!userIdFromDatabase) {
+    res.status(403).send("error: username or password are invalid");
+    return;
+  }
+  res.cookie('user_id', userIdFromDatabase);
   res.redirect("/urls");
 });
   // const values = Object.keys(users).map(key => users[key]);
@@ -237,7 +255,7 @@ app.post('/register', (req, res) => {
     return;
   }
   const enteredPassword = req.body.password;
-  const hashedPassword = bcrypt.hashSync(password, 10);
+  const hashedPassword = bcrypt.hashSync(enteredPassword, 10);
 
   users[randomString] = {
     id: randomString,

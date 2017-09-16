@@ -1,11 +1,14 @@
 var express = require("express");
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
 
 var app = express();
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['secretKey'],
+}));
 
 var PORT = process.env.PORT || 8080;
 
@@ -42,7 +45,8 @@ app.use(function (req, res, next) {
    // res.locals = {
    //   username: req.cookies["username"]
    // };
-   res.locals.user = users[req.cookies["user_id"]]
+   // res.locals.user = users[req.cookies["user_id"]]
+   res.locals.user = users[req.session.user_id]
    next();
 });
 
@@ -57,7 +61,11 @@ function generateRandomString() {
 
 //Home page
 app.get("/", (req, res) => {
-  res.end("Hello!");
+  if (req.session.user_id) {
+    res.redirect("/urls");
+    return;
+  }
+  res.redirect("/login");
 });
 
 //check for requirment, this might not be needed
@@ -82,14 +90,15 @@ function urlForUser (id) {
 
 //passes the urlDatabase to urls_index and render the page
 app.get("/urls", (req, res) => {
-  let userid = req.cookies["user_id"];
+  // let userid = req.cookies["user_id"];
+  let userid = req.session.user_id;
   let templateVars = { urls: urlForUser(userid) };
   res.render("urls_index", templateVars);
 });
 
 //for to submit new urls to database
 app.get("/urls/new", (req, res) => {
-  if (req.cookies["user_id"]){
+  if (req.session.user_id){
   res.render("urls_new");
   } else {
     res.redirect("/urls");
@@ -101,21 +110,25 @@ app.post("/urls", (req, res) => {
   const randomString = generateRandomString();
   urlDatabase[randomString] = {
     "id": randomString,
-    "userID": req.cookies["user_id"],
+    "userID": req.session.user_id,
     "longURL": req.body.longURL
   }
-  console.log(urlDatabase);
+  // console.log(urlDatabase);
   res.redirect(`/urls`);
 });
 //404 needed
 //passing data to urls_show templet and rendering the templet
 app.get("/urls/:id", (req, res) => {
-  let userid = req.cookies["user_id"];
+  let userid = req.session.user_id;
   if (!userid) {
     res.redirect("/urls");
     return;
   }
-
+  //just added..if user is logged it but does not own the URL with the given ID
+  if (userid !== urlDatabase[req.params.id].userID){
+    res.sendStatus(403, "you don't have access to this url");
+    return;
+  }
   let urlobject = urlDatabase[req.params.id]
   if (!urlobject) {
     res.sendStatus(404);
@@ -132,6 +145,10 @@ app.get("/urls/:id", (req, res) => {
 //404 needed
 //when client enters a short URL he get redirected to the long URL assigned.
 app.get("/u/:shortURL", (req, res) => {
+  //just added..if URL for the given ID does not exist:
+  if (!urlDatabase[req.params.shortURL]) {
+    res.sendStatus(404, "the requested url has not been generated");
+  }
   let shortURL = req.params.shortURL;
   let longURL = urlDatabase[shortURL].longURL;
   res.redirect(longURL);
@@ -140,12 +157,12 @@ app.get("/u/:shortURL", (req, res) => {
 // Delete Item
 app.post("/urls/:id/delete", (req, res) => {
   let id = req.params.id;
-  let user_id = req.cookies["user_id"];
+  let user_id = req.session.user_id;
   if (!id || !user_id) {
     res.sendStatus(401);
     return;
   }
-  if ((req.cookies["user_id"]) === (urlDatabase[id]["user_id"])) {
+  if ((req.session.user_id) === (urlDatabase[id]["user_id"])) {
     delete urlDatabase[id];
     res.redirect('/urls');
   } else {
@@ -157,7 +174,7 @@ app.post("/urls/:id/delete", (req, res) => {
 app.post("/urls/:id", (req, res) => {
   let id = req.params.id;
   let userID = urlDatabase[id]["userID"];
-  if (userID === req.cookies["user_id"]) {
+  if (userID === req.session.user_id) {
     urlDatabase[id].longURL = req.body.longURL;
     res.redirect('/urls');
   } else {
@@ -167,10 +184,15 @@ app.post("/urls/:id", (req, res) => {
 
 // login endpoint
 app.get('/login', (req, res) => {
+  //just added.. if user is logged in:
+  if (req.session.user_id) {
+    res.redirect("/urls");
+    return;
+  }
   res.render('login')
 });
 
-
+//function check email&password, if true, returns obj with userID
 
 
 //login handler & set the cookie then redirect back to urls
@@ -187,44 +209,33 @@ app.post("/login", (req, res) => {
   }
   //userHashedPasswordFromDatabase
   let uHPFD = findUser(email);
+  console.log("password:---", password, "uHPFD:---", uHPFD)
+  console.log("----------", bcrypt.compareSync(password, uHPFD));
   if (!bcrypt.compareSync(password, uHPFD)) {
     res.status(403).send("error: username or password are invalid");
     return;
   }
-
-// );
-  // function findUserID (email, password) {
-  //   for (let key in users) {
-  //     if (users[key].email === email && users[key].password === password) {
-  //       return users[key];
-  //     }
-  //   }
-  // }
-  // const userObj = findUser(email, password);
   if (!userIdFromDatabase) {
     res.status(403).send("error: username or password are invalid");
     return;
   }
-  res.cookie('user_id', userIdFromDatabase);
+  req.session.user_id = userIdFromDatabase;
   res.redirect("/urls");
 });
-  // const values = Object.keys(users).map(key => users[key]);
-
-  // let usernameValue = req.body.username;
-  // let passwordValue = req.body.password;
-  // res.cookie("username", usernameValue);
-  // res.cookie("password", passwordValue);
-  // res.redirect("/urls");
-
 
 //Logout and remove cookie history
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session.user_id = null;
   res.redirect("/urls");
 });
 
 //register endpoint
 app.get('/register', (req, res) => {
+  //just added.. if user is logged in:
+  if (req.session.user_id) {
+    res.redirect("/urls");
+    return;
+  }
   res.render('register');
 });
 
@@ -246,7 +257,7 @@ app.post('/register', (req, res) => {
 
   //check if email or password is empty strings, if so return error
   if (!req.body.email || !req.body.password) {
-    res.send('error: please enter a valid username and password');
+    res.send("error: please enter a valid username and password");
     return;
   }
   //check if email already exist, if so return error
@@ -262,7 +273,8 @@ app.post('/register', (req, res) => {
     email: req.body.email,
     password: hashedPassword
   };
-  res.cookie("user_id", users[randomString].id);
+  // res.cookie("user_id", users[randomString].id);
+  req.session.user_id = users[randomString].id;
   res.redirect('/urls');
 });
 

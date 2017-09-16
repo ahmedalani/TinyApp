@@ -91,7 +91,7 @@ app.get("/urls/new", (req, res) => {
   if (req.cookies["user_id"]){
   res.render("urls_new");
   } else {
-    res.redirect("../urls");
+    res.redirect("/urls");
   }
 });
 

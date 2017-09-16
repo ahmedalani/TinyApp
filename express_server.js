@@ -1,6 +1,7 @@
 var express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
 
 var app = express();
 app.use(bodyParser.urlencoded({extended: true}));
@@ -228,15 +229,20 @@ app.post('/register', (req, res) => {
   //check if email or password is empty strings, if so return error
   if (!req.body.email || !req.body.password) {
     res.send('error: please enter a valid username and password');
+    return;
   }
   //check if email already exist, if so return error
   if (doesEmailExist(req.body.email)) {
     res.send('error: sorry username is used :-/ ');
+    return;
   }
+  const enteredPassword = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
   users[randomString] = {
     id: randomString,
     email: req.body.email,
-    password: req.body.password
+    password: hashedPassword
   };
   res.cookie("user_id", users[randomString].id);
   res.redirect('/urls');

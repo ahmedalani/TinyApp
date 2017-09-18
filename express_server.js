@@ -1,13 +1,13 @@
 var express = require("express");
 const bodyParser = require("body-parser");
-const cookieSession = require('cookie-session');
-const bcrypt = require('bcrypt');
+const cookieSession = require("cookie-session");
+const bcrypt = require("bcrypt");
 
 var app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
-  name: 'session',
-  keys: ['secretKey'],
+  name: "session",
+  keys: ["secretKey"],
 }));
 
 var PORT = process.env.PORT || 8080;
@@ -31,21 +31,17 @@ const urlDatabase = {
 //users data obj
 const users =
 { uWhWIl:
-   { id:  'uWhWIl' ,
-     email:  'ahmed@alani' ,
-     password:  'alani'  },
+   { id:  "uWhWIl",
+     email:  "ahmed@alani",
+     password:  "alani" },
   nlQUFi:
-   { id:  'nlQUFi' ,
-     email:  'shosho@shosho' ,
-     password: 'shosho'  }
+   { id:  "nlQUFi",
+     email:  "shosho@shosho",
+     password: "shosho" }
 };
 
 //middleware: object passed to all templets through this function
 app.use(function (req, res, next) {
-   // res.locals = {
-   //   username: req.cookies["username"]
-   // };
-   // res.locals.user = users[req.cookies["user_id"]]
    res.locals.user = users[req.session.user_id]
    next();
 });
@@ -101,22 +97,26 @@ app.get("/urls/new", (req, res) => {
   if (req.session.user_id){
   res.render("urls_new");
   } else {
-    res.redirect("/urls");
+    res.redirect("/login");
   }
 });
 
 //redirect to the new URL created and assign a short URL to the long URL created.
 app.post("/urls", (req, res) => {
+  let userid = req.session.user_id;
+  if (!userid) {
+    res.status(403).send("You are not logged in, please do in order to use this service");
+    return;
+  }
   const randomString = generateRandomString();
   urlDatabase[randomString] = {
     "id": randomString,
     "userID": req.session.user_id,
     "longURL": req.body.longURL
   }
-  // console.log(urlDatabase);
-  res.redirect(`/urls`);
+  res.redirect(`/urls/${randomString}`);
 });
-//404 needed
+
 //passing data to urls_show templet and rendering the templet
 app.get("/urls/:id", (req, res) => {
   let userid = req.session.user_id;
@@ -124,30 +124,28 @@ app.get("/urls/:id", (req, res) => {
     res.redirect("/urls");
     return;
   }
-  //just added..if user is logged it but does not own the URL with the given ID
-  if (userid !== urlDatabase[req.params.id].userID){
-    res.sendStatus(403, "you don't have access to this url");
-    return;
-  }
   let urlobject = urlDatabase[req.params.id]
   if (!urlobject) {
-    res.sendStatus(404);
+    res.status(404).send("Does Not exist");
     return;
   }
-  let templateVars = {
+  //just added..if user is logged it but does not own the URL with the given ID
+  if (userid !== urlDatabase[req.params.id].userID){
+    res.status(403).send("you don't have access to this url");
+    return;
+  }
+    let templateVars = {
     shortURL : req.params.id,
     longURL: urlDatabase[req.params.id].longURL
   }
-    // shortURL: req.params.id,
-    // longURL: urlobject.longURL
   res.render("urls_show", templateVars);
 });
-//404 needed
+
 //when client enters a short URL he get redirected to the long URL assigned.
 app.get("/u/:shortURL", (req, res) => {
-  //just added..if URL for the given ID does not exist:
   if (!urlDatabase[req.params.shortURL]) {
-    res.sendStatus(404, "the requested url has not been generated");
+    res.status(404).send("the requested url has not been generated");
+    return;
   }
   let shortURL = req.params.shortURL;
   let longURL = urlDatabase[shortURL].longURL;
@@ -156,22 +154,32 @@ app.get("/u/:shortURL", (req, res) => {
 
 // Delete Item
 app.post("/urls/:id/delete", (req, res) => {
-  let id = req.params.id;
-  let user_id = req.session.user_id;
-  if (!id || !user_id) {
-    res.sendStatus(401);
+  let userid = req.session.user_id;
+  if (!userid) {
+    res.redirect("/urls");
     return;
   }
-  if ((req.session.user_id) === (urlDatabase[id]["user_id"])) {
+  let id = req.params.id;
+  if (!id) {
+    res.status(403).send("url is not recognized");
+    return;
+  }
+  if ((userid) === (urlDatabase[id]["userID"])) {
     delete urlDatabase[id];
     res.redirect('/urls');
+    return;
   } else {
     res.status(403).send("sorry you're only allowed to edit your ownd URLs :-/ ");
   }
 });
-//404 needed
+
 //Edit the long URL
 app.post("/urls/:id", (req, res) => {
+  let userid = req.session.user_id;
+  if (!userid) {
+    res.redirect("/urls");
+    return;
+  }
   let id = req.params.id;
   let userID = urlDatabase[id]["userID"];
   if (userID === req.session.user_id) {
@@ -183,17 +191,14 @@ app.post("/urls/:id", (req, res) => {
 });
 
 // login endpoint
-app.get('/login', (req, res) => {
+app.get("/login", (req, res) => {
   //just added.. if user is logged in:
   if (req.session.user_id) {
     res.redirect("/urls");
     return;
   }
-  res.render('login')
+  res.render("login")
 });
-
-//function check email&password, if true, returns obj with userID
-
 
 //login handler & set the cookie then redirect back to urls
 app.post("/login", (req, res) => {
@@ -209,13 +214,11 @@ app.post("/login", (req, res) => {
   }
   //userHashedPasswordFromDatabase
   let uHPFD = findUser(email);
-  console.log("password:---", password, "uHPFD:---", uHPFD)
-  console.log("----------", bcrypt.compareSync(password, uHPFD));
-  if (!bcrypt.compareSync(password, uHPFD)) {
-    res.status(403).send("error: username or password are invalid");
+  if (!userIdFromDatabase) {
+    res.status(403).send("error: username invalid");
     return;
   }
-  if (!userIdFromDatabase) {
+  if (!bcrypt.compareSync(password, uHPFD)) {
     res.status(403).send("error: username or password are invalid");
     return;
   }
@@ -230,39 +233,41 @@ app.post("/logout", (req, res) => {
 });
 
 //register endpoint
-app.get('/register', (req, res) => {
-  //just added.. if user is logged in:
+app.get("/register", (req, res) => {
   if (req.session.user_id) {
     res.redirect("/urls");
     return;
   }
-  res.render('register');
+  res.render("register");
 });
 
 //looping through the users database to find a matching email
 function doesEmailExist(email) {
   const values = Object.keys(users).map(key => users[key]);
-  for (let i = 0; i < values.length; i++) {
-    if (values[i].email === email) {
-      return true;
+    let emailstatus;
+  values.forEach((userObj) => {
+    if (userObj.email === email){
+      return emailstatus = true;
     } else {
-        return false;
-      }
-  }
+      return emailstatus = false;
+    }
+  });
+  return emailstatus;
 }
 
 //register handler
-app.post('/register', (req, res) => {
+app.post("/register", (req, res) => {
   let randomString = generateRandomString();
 
   //check if email or password is empty strings, if so return error
   if (!req.body.email || !req.body.password) {
-    res.send("error: please enter a valid username and password");
+    res.status(401).send("error: please enter a valid username and password");
     return;
   }
+
   //check if email already exist, if so return error
   if (doesEmailExist(req.body.email)) {
-    res.send('error: sorry username is used :-/ ');
+    res.status(401).send('error: sorry username is used :-/ ');
     return;
   }
   const enteredPassword = req.body.password;
@@ -273,7 +278,6 @@ app.post('/register', (req, res) => {
     email: req.body.email,
     password: hashedPassword
   };
-  // res.cookie("user_id", users[randomString].id);
   req.session.user_id = users[randomString].id;
   res.redirect('/urls');
 });

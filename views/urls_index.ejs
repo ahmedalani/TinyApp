@@ -6,6 +6,9 @@
 <body>
   <% include ./partials/_header %>
   <% if (user) { %>
+    <form method="get" action="/urls/new" >
+      <button>Add a new URL</button>
+    </form>
     <ul>
       <% for (var key in urls) { %>
         <li>
